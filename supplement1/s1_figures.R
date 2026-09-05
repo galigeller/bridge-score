@@ -2,12 +2,15 @@
 # =============================================================================
 # s1_figures.R — Supplement S1 figures and summary tables from results/s1_results.csv
 #
-#   fig_s1_tracking.pdf      estimated (corrected) vs true score,
-#                            separability x bridge strength (balanced 10+10)
-#   fig_s1_separability.pdf  accuracy vs p_between by node type (thesis Fig. 6 analog)
-#   fig_s1_invariance.pdf    bridge and pure-node scores across splits,
-#                            raw vs corrected, at baseline separability
-#   fig_s1_floor.pdf         whole-count floor at the base condition
+#   fig_s1_tracking.pdf                estimated (corrected) vs true score,
+#                                      separability x bridge strength (balanced 10+10)
+#   fig_s1_separability.pdf            accuracy vs p_between by node type
+#                                      (thesis Fig. 6 analog)
+#   fig_s1_invariance_true_structure.pdf  raw vs corrected across splits, computed
+#                                      from the true structure (no detection) —
+#                                      the p. 3 invariance claim in isolation
+#   fig_s1_invariance_detected.pdf     the same comparison under curvature detection
+#   fig_s1_floor.pdf                   whole-count floor at the base condition
 #   s1_summary.csv           MSE / bias by condition and node type
 #   s1_correlations.csv      Spearman(est, true) and mean detected k by condition
 # =============================================================================
@@ -56,37 +59,57 @@ p2 <- ggplot(acc, aes(p_between, mse_corrected, colour = type_lab)) +
   theme(legend.position = "bottom")
 ggsave(file.path("results", "fig_s1_separability.pdf"), p2, width = 7.5, height = 3.6)
 
-## Figure 3: size invariance at baseline separability, raw vs corrected --------
-inv_dat <- res[res$p_between == BASE_PB, ]
-inv <- do.call(rbind, lapply(
-  split(inv_dat, list(inv_dat$pi1, inv_dat$split, inv_dat$type_lab,
-                      inv_dat$community), drop = TRUE),
-  function(d) data.frame(pi1 = d$pi1[1], split = d$split[1],
-                         type_lab = d$type_lab[1], community = d$community[1],
-                         raw = mean(d$b_raw), corrected = mean(d$b_corrected),
-                         truth = mean(d$b_true),
-                         raw_sd = sd(d$b_raw), corrected_sd = sd(d$b_corrected))))
-inv_long <- rbind(
-  transform(inv, score = raw, sd = raw_sd, estimator = "raw"),
-  transform(inv, score = corrected, sd = corrected_sd, estimator = "corrected")
-)
-inv_long$grp <- ifelse(inv_long$type_lab == "bridge", "bridge",
-                       paste0("pure, ", ifelse(inv_long$community == "C1",
-                                               "larger community", "smaller community")))
-inv_long <- inv_long[inv_long$type_lab != "neighbor of bridge", ]
-p3 <- ggplot(inv_long, aes(split, score, colour = estimator, group = estimator)) +
-  geom_line(linewidth = 0.5) +
-  geom_pointrange(aes(ymin = score - sd, ymax = score + sd),
-                  size = 0.3, position = position_dodge(width = 0.15)) +
-  geom_point(aes(y = truth), colour = "black", shape = 4, size = 2) +
-  facet_grid(grp ~ sprintf("pi == '(%.1f, %.1f)'", pi1, 1 - pi1),
-             labeller = labeller(.cols = label_parsed)) +
-  scale_colour_manual(values = c(corrected = "#4477AA", raw = "#CC6677")) +
-  labs(x = "community split", y = "mean score (± SD); x = mean true score",
-       colour = NULL) +
-  theme_minimal(base_size = 10) +
-  theme(legend.position = "bottom")
-ggsave(file.path("results", "fig_s1_invariance.pdf"), p3, width = 7, height = 6.5)
+## Figures 3a/3b: size invariance at baseline separability ---------------------
+# Two node groups: the bridge, and a pure node in community 2 (the smaller
+# community in the unequal splits; at 10+10 the communities are equal and the
+# choice of community is arbitrary).
+# 3a  the score itself: raw vs corrected computed FROM THE TRUE STRUCTURE
+#     (no detection) — this is the p. 3 invariance claim in isolation.
+# 3b  the same comparison under curvature detection — what survives in practice.
+inv_dat <- res[res$p_between == BASE_PB &
+                 (res$type == "bridge" |
+                    (res$type == "pure" & res$community == "C2")), ]
+inv_dat$grp <- ifelse(inv_dat$type == "bridge", "bridge",
+                      "pure node, smaller community")
+
+inv_agg <- function(d, raw_col, cor_col) {
+  do.call(rbind, lapply(split(d, list(d$pi1, d$split, d$grp), drop = TRUE),
+    function(x) data.frame(pi1 = x$pi1[1], split = x$split[1], grp = x$grp[1],
+                           raw = mean(x[[raw_col]]), raw_sd = sd(x[[raw_col]]),
+                           corrected = mean(x[[cor_col]]),
+                           corrected_sd = sd(x[[cor_col]]),
+                           truth = mean(x$b_true))))
+}
+inv_plot <- function(agg, ylab, show_truth) {
+  long <- rbind(
+    transform(agg, score = raw, sd = raw_sd, estimator = "raw"),
+    transform(agg, score = corrected, sd = corrected_sd, estimator = "corrected"))
+  p <- ggplot(long, aes(split, score, colour = estimator, group = estimator)) +
+    geom_line(linewidth = 0.6) +
+    geom_pointrange(aes(ymin = score - sd, ymax = score + sd),
+                    size = 0.35, position = position_dodge(width = 0.12)) +
+    facet_grid(grp ~ sprintf("pi == '(%.1f, %.1f)'", pi1, 1 - pi1),
+               labeller = labeller(.cols = label_parsed)) +
+    scale_colour_manual(values = c(corrected = "#4477AA", raw = "#CC6677")) +
+    labs(x = "community split", y = ylab, colour = NULL) +
+    theme_minimal(base_size = 10) +
+    theme(legend.position = "bottom")
+  if (show_truth) p <- p + geom_point(aes(y = truth), colour = "black",
+                                      shape = 4, size = 2)
+  p
+}
+
+p3a <- inv_plot(inv_agg(inv_dat, "b_raw_true", "b_true"),
+                "mean score (± SD), from the true community structure",
+                show_truth = FALSE)
+ggsave(file.path("results", "fig_s1_invariance_true_structure.pdf"),
+       p3a, width = 7.5, height = 5)
+
+p3b <- inv_plot(inv_agg(inv_dat, "b_raw", "b_corrected"),
+                "mean score (± SD) under detection; x = mean true score",
+                show_truth = TRUE)
+ggsave(file.path("results", "fig_s1_invariance_detected.pdf"),
+       p3b, width = 7.5, height = 5)
 
 ## Figure 4: whole-count floor at the base condition ---------------------------
 fl <- res[!is.na(res$floor_gap), ]

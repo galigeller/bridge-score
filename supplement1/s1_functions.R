@@ -81,7 +81,16 @@ true_bridge_score <- function(A, Pi) {
   Y <- R / ifelse(s > 0, s, 1)                       # (B3) corrected memberships
   b <- (K / (K - 1)) * (1 - rowSums(Y^2))            # (B4)
   b[s == 0] <- 0
-  list(b_true = as.numeric(b), y_true = Y, counts = Cnt)
+  # The RAW score evaluated on the same true structure (participation of the
+  # uncorrected memberships y_l = c_l/deg, manuscript Eq. 2 on Eq. 1). The pair
+  # (b_raw_true, b_true) isolates the size correction from detection entirely:
+  # both use the true communities, they differ only in the normalization.
+  deg <- rowSums(A)
+  Yraw <- Cnt / ifelse(deg > 0, deg, 1)
+  b_raw <- (K / (K - 1)) * (1 - rowSums(Yraw^2))
+  b_raw[deg == 0] <- 0
+  list(b_true = as.numeric(b), b_raw_true = as.numeric(b_raw),
+       y_true = Y, counts = Cnt)
 }
 
 # ---------------------------------------------------------------------------

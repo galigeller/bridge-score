@@ -34,8 +34,9 @@ Swap the entries of `pi_bridge` in `s1_run.R` to flip this.
 | `ricci_flow_tests.R` | thesis test suite, **verbatim** (`Tests/testthat/ricci_flow_tests.R`; only the `source()` path adapted) — 21 hand-verified ORC / Ricci-flow / detection tests |
 | `s1_functions.R` | generator, b_true, corrected + raw scores, whole-count floor |
 | `s1_run.R` | the 21 × 200 grid; per-condition CSVs, resumable |
-| `s1_figures.R` | 4 figures + summary tables from the results |
+| `s1_figures.R` | 5 figures + summary tables: tracking, separability curve, invariance from the true structure (no detection), invariance under detection, whole-count floor |
 | `s1_tests.R` | correctness anchors for the S1-specific code (Table B1, worked example, floor) |
+| `s1_sensitivity.R` | flow-parameter sensitivity at the base condition: T ∈ {4, 16, 30}, δ_prune ∈ {.05, .2}, same 200 networks; T = 8 reference read from `results/cond_2.csv` |
 
 ## Run
 
@@ -44,6 +45,8 @@ Rscript ricci_flow_tests.R         # thesis algorithm tests (21x "Test passed")
 Rscript s1_tests.R                 # S1 anchors — must print "all tests passed"
 Rscript s1_run.R                   # full grid, ~5–7 h single core
 Rscript s1_figures.R               # results/fig_s1_*.pdf, s1_summary.csv
+Rscript s1_sensitivity.R           # optional: flow-parameter sensitivity
+                                   # (needs results/cond_2.csv from s1_run.R)
 ```
 
 `S1_CORES=8 Rscript s1_run.R` parallelizes over replications (~1 h on an

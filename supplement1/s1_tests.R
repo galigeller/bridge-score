@@ -49,7 +49,12 @@ stopifnot(near(round(b["P1_4"], 2), 0.65))          # node 4: 756/1156 = 0.6540
 stopifnot(near(b["P1_1"], 0.36))                    # node 1: 4 * .9 * .1
 stopifnot(near(tr$counts["B", ], c(3, 2)))          # whole counts (pure neighbors)
 stopifnot(near(tr$counts["P1_1", ], c(3.5, 0.5)))   # fractional (bridge neighbor)
-message("test 1 (Table B1) ......................... ok")
+# raw score on the true structure: y_raw = counts/deg, participation of that.
+b_rt <- setNames(tr$b_raw_true, rownames(net$Pi))
+stopifnot(near(b_rt["B"], 0.96))                    # (3,2)/5 -> 4*.6*.4 (masses equal)
+stopifnot(near(b_rt["P1_1"], 4 * (3.5/4) * (0.5/4)))# = 0.4375
+stopifnot(near(b_rt["P1_4"], 4 * 0.75 * 0.25))      # (3,1)/4 -> 0.75
+message("test 1 (Table B1 + raw-on-truth) .......... ok")
 
 ## Test 2: cluster-size-correction worked example -----------------------------
 # 4 pure small nodes y=(1,0); one small node y=(.75,.25) with d=(3,1);

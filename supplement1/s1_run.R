@@ -97,6 +97,7 @@ run_one <- function(cond_idx, rep_idx) {
     type        = info$type,
     community   = info$community,
     b_true      = truth$b_true,
+    b_raw_true  = truth$b_raw_true,   # raw score on the true structure (no detection)
     b_corrected = sc$b_corrected,
     b_raw       = sc$b_raw,
     k_detected  = sc$k,
